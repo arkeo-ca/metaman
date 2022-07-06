@@ -4,7 +4,7 @@ use actix_web::{web, HttpResponse};
 pub struct MarkingData {
     name: String,
     definition_type: String,
-    definition: String
+    definition: String,
 }
 
 pub async fn create_marking(_form: web::Json<MarkingData>) -> HttpResponse {
