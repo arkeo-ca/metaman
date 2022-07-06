@@ -1,4 +1,4 @@
-use metaman::run;
+use metaman::startup::run;
 use std::net::TcpListener;
 
 #[tokio::main]
