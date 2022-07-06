@@ -1,3 +1,5 @@
+use metaman::configuration::get_configuration;
+use sqlx::{Connection, PgConnection};
 use std::net::TcpListener;
 
 fn spawn_app() -> String {
@@ -28,6 +30,11 @@ async fn health_check_works() {
 #[tokio::test]
 async fn create_marking_returns_a_201_for_valid_form_data() {
     let app_address = spawn_app();
+    let configuration = get_configuration().expect("Failed to read configuration");
+    let connection_string = configuration.database.connection_string();
+    let mut connection = PgConnection::connect(&connection_string)
+        .await
+        .expect("Failed to connect to Postgres.");
     let client = reqwest::Client::new();
 
     let body = "{\"name\": \"tlp_red\", \"definition_type\": \"tlp\", \"definition\": \"TLP Red\"}";
@@ -40,6 +47,15 @@ async fn create_marking_returns_a_201_for_valid_form_data() {
         .expect("Failed to execute request.");
 
     assert_eq!(201, response.status().as_u16());
+
+    let saved = sqlx::query!("SELECT name, definition_type, definition FROM markings",)
+        .fetch_one(&mut connection)
+        .await
+        .expect("Failed to fetch saved marking.");
+
+    assert_eq!(saved.name, "tlp_red");
+    assert_eq!(saved.definition_type, "tlp");
+    assert_eq!(saved.definition, "TLP Red");
 }
 
 #[tokio::test]
