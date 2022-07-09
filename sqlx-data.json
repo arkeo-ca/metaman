@@ -1,0 +1,20 @@
+{
+  "db": "PostgreSQL",
+  "8c10f5102716e399979c489d08e851c451c1dda507b6df99d36667795d18acb3": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Text",
+          "Text",
+          "Text",
+          "Timestamptz",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "\n        INSERT INTO markings (id, name, definition_type, definition, created_at, created_by)\n        VALUES ($1, $2, $3, $4, $5, $6)\n        "
+  }
+}
