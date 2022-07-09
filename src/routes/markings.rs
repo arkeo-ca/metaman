@@ -3,6 +3,8 @@ use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::domain::{MarkingName, NewMarking};
+
 #[derive(serde::Deserialize)]
 pub struct JsonData {
     name: String,
@@ -20,23 +22,33 @@ pub struct JsonData {
     )
 )]
 pub async fn create_marking(form: web::Json<JsonData>, pool: web::Data<PgPool>) -> HttpResponse {
-    match insert_marking(&pool, &form).await {
+    let name = match MarkingName::parse(form.0.name) {
+        Ok(name) => name,
+        Err(_) => return HttpResponse::BadRequest().finish(),
+    };
+    let new_marking = NewMarking {
+        name,
+        definition_type: form.0.definition_type,
+        definition: form.0.definition,
+    };
+
+    match insert_marking(&pool, &new_marking).await {
         Ok(_) => HttpResponse::Created().finish(),
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
 
-#[tracing::instrument(name = "Saving new marking in the database", skip(form, pool))]
-pub async fn insert_marking(pool: &PgPool, form: &JsonData) -> Result<(), sqlx::Error> {
+#[tracing::instrument(name = "Saving new marking in the database", skip(new_marking, pool))]
+pub async fn insert_marking(pool: &PgPool, new_marking: &NewMarking) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
         INSERT INTO markings (id, name, definition_type, definition, created_at, created_by)
         VALUES ($1, $2, $3, $4, $5, $6)
         "#,
         Uuid::new_v4(),
-        form.name,
-        form.definition_type,
-        form.definition,
+        new_marking.name.as_ref(),
+        new_marking.definition_type,
+        new_marking.definition,
         Utc::now(),
         Uuid::new_v4()
     )

@@ -105,6 +105,43 @@ async fn create_marking_returns_a_201_for_valid_form_data() {
 }
 
 #[tokio::test]
+async fn create_marking_returns_a_400_when_fields_are_present_but_invalid() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+    let test_cases = vec![
+        (
+            "{\"name\": \"\", \"definition_type\": \"tlp\", \"definition\": \"TLP Red\"}",
+            "empty name",
+        ),
+        (
+            "{\"name\": \"tlp_red\", \"definition_type\": \"\", \"definition\": \"TLP Red\"}",
+            "empty definition type",
+        ),
+        (
+            "{\"name\": \"tlp_red\", \"definition_type\": \"tlp\", \"definition\": \"\"}",
+            "empty definition",
+        ),
+    ];
+
+    for (body, description) in test_cases {
+        let response = client
+            .post(&format!("{}/markings", &app.address))
+            .header("Content-Type", "application/json")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to execute request.");
+
+        assert_eq!(
+            400,
+            response.status().as_u16(),
+            "The API did not return a 400 when the payload had an {}.",
+            description
+        )
+    }
+}
+
+#[tokio::test]
 async fn create_marking_returns_a_400_when_data_is_missing() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
