@@ -3,7 +3,7 @@ use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::domain::{MarkingName, NewMarking};
+use crate::domain::{MarkingDefinition, MarkingDefinitionType, MarkingName, NewMarking};
 
 #[derive(serde::Deserialize)]
 pub struct JsonData {
@@ -26,10 +26,18 @@ pub async fn create_marking(form: web::Json<JsonData>, pool: web::Data<PgPool>) 
         Ok(name) => name,
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
+    let definition = match MarkingDefinition::parse(form.0.definition) {
+        Ok(definition) => definition,
+        Err(_) => return HttpResponse::BadRequest().finish(),
+    };
+    let definition_type = match MarkingDefinitionType::parse(form.0.definition_type) {
+        Ok(definition_type) => definition_type,
+        Err(_) => return HttpResponse::BadRequest().finish(),
+    };
     let new_marking = NewMarking {
         name,
-        definition_type: form.0.definition_type,
-        definition: form.0.definition,
+        definition_type,
+        definition,
     };
 
     match insert_marking(&pool, &new_marking).await {
@@ -47,8 +55,8 @@ pub async fn insert_marking(pool: &PgPool, new_marking: &NewMarking) -> Result<(
         "#,
         Uuid::new_v4(),
         new_marking.name.as_ref(),
-        new_marking.definition_type,
-        new_marking.definition,
+        new_marking.definition_type.as_ref(),
+        new_marking.definition.as_ref(),
         Utc::now(),
         Uuid::new_v4()
     )
