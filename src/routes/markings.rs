@@ -12,6 +12,22 @@ pub struct JsonData {
     definition: String,
 }
 
+impl TryFrom<JsonData> for NewMarking {
+    type Error = String;
+
+    fn try_from(value: JsonData) -> Result<Self, Self::Error> {
+        let name = MarkingName::parse(value.name)?;
+        let definition = MarkingDefinition::parse(value.definition)?;
+        let definition_type = MarkingDefinitionType::parse(value.definition_type)?;
+
+        Ok(Self {
+            name,
+            definition_type,
+            definition,
+        })
+    }
+}
+
 #[tracing::instrument(
     name = "Adding a new marking",
     skip(form, pool),
@@ -22,22 +38,9 @@ pub struct JsonData {
     )
 )]
 pub async fn create_marking(form: web::Json<JsonData>, pool: web::Data<PgPool>) -> HttpResponse {
-    let name = match MarkingName::parse(form.0.name) {
-        Ok(name) => name,
+    let new_marking = match form.0.try_into() {
+        Ok(marking) => marking,
         Err(_) => return HttpResponse::BadRequest().finish(),
-    };
-    let definition = match MarkingDefinition::parse(form.0.definition) {
-        Ok(definition) => definition,
-        Err(_) => return HttpResponse::BadRequest().finish(),
-    };
-    let definition_type = match MarkingDefinitionType::parse(form.0.definition_type) {
-        Ok(definition_type) => definition_type,
-        Err(_) => return HttpResponse::BadRequest().finish(),
-    };
-    let new_marking = NewMarking {
-        name,
-        definition_type,
-        definition,
     };
 
     match insert_marking(&pool, &new_marking).await {
